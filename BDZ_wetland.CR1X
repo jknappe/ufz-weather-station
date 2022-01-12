@@ -16,7 +16,7 @@
 '    and soil temperature
 '    -> connected on C3
 '    -> SDI-12 address: 0, 1, 2
-'  - 3x Meter TEROS21 soil wate rpotential sensors measuring soil matrix 
+'  - 2x Meter TEROS21 soil wate rpotential sensors measuring soil matrix 
 '    potential, and soil temperature
 '    -> connected on C5
 '    -> SDI-12 address: 4, 5
@@ -44,20 +44,20 @@ Const SEALEVELADJ = 12.78856  'adjusting barometer to sea level (elevation = 107
 
 ' Variables
 ' ----------------------------------------------------
-Public BattV
-Public PTemp
-Public CS65X_1(3)
-Public CS65X_2(3)
-Public CS65X_3(3)
-Public TEROS_4(2)
-Public TEROS_5(2)
+Public BattV                 'Battery voltage
+Public PTemp                 'Internal panel temperature
+Public CS65X_1(3)            'Soil sensor SDI-12 output
+Public CS65X_2(3)            'Soil sensor SDI-12 output
+Public CS65X_3(3)            'Soil sensor SDI-12 output
+Public TEROS_4(2)            'Soil sensor SDI-12 output
+Public TEROS_5(2)            'Soil sensor SDI-12 output
 
-Public CVData(14)
-Public SlrTF_MJ
-Public CVMeta As String * 40
-Public WSprev
-Public WindDirprev
-Public MaxWSprev
+Public CVData(14)            'ClimaVue SDI-12 output
+Public SlrTF_MJ              'ClimaVue total solar flux
+Public WSprev                'ClimaVue temporary windspeed
+Public WindDirprev           'ClimaVue temporary wind direction
+Public MaxWSprev             'ClimaVue temporary maximum windspeed
+Public CVMeta As String * 40 'ClimaVue meta data
 
 Public Invalid_Wind As Long  'number of invalid wind measurements
 Public N_meas                'number of measurements per log interval
