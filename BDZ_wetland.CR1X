@@ -1,0 +1,282 @@
+' Program for CR1000X data logger: BDZ
+' ====================================================
+
+' This program was written to collect data on a CR1000X data logger with the
+' following sensors attached:
+'  - 1x Campbell ClimaVue50 weather station (measuring air temperature, 
+'    barometric pressure, lightning average distance, lightning strike count, 
+'    precipitation, relative humidity, solar radiation, tilt, wind direction, 
+'    and wind speed)
+'    -> connected on C1
+'    -> SDI-12 address: 9
+'  - 3x Campbell CS65X water content reflectometers measuring volumetric
+'    water content, electrical conductivity, dielectric permittivity, 
+'    and soil temperature
+'    -> connected on C3
+'    -> SDI-12 address: 0, 1, 2
+'  - 3x Meter TEROS21 soil wate rpotential sensors measuring soil matrix 
+'    potential, and soil temperature
+'    -> connected on C5
+'    -> SDI-12 address: 4, 5
+'  - additional measurements of logger battery voltage and panel temperature
+
+' Date: 2022-01-04
+' Version: 0.1
+' Author: Jan Knappe (jan.knappe@gmail.com)
+
+
+' ====================================================
+' Definitions
+' ====================================================
+
+' Constants
+' ----------------------------------------------------
+Const SCAN_INTERVAL  =  1     'logger scan interval (in minutes)
+Const LOG_INTERVAL  =  10     'data logging interval (in minutes)
+Const SEALEVELADJ = 12.78856  'adjusting barometer to sea level (elevation = 107 m)
+
+' Variables
+' ----------------------------------------------------
+Public BattV
+Public PTemp
+Public CS65X_1(3)
+Public CS65X_2(3)
+Public CS65X_3(3)
+Public TEROS_4(2)
+Public TEROS_5(2)
+
+Public CVData(14)
+Public SlrTF_MJ
+Public CVMeta As String * 40
+Public WSprev
+Public WindDirprev
+Public MaxWSprev
+Public Invalid_Wind As Long
+
+' Aliases
+' ----------------------------------------------------
+Alias CS65X_1(1) = VWC_1
+Alias CS65X_1(2) = EC_1
+Alias CS65X_1(3) = T_1
+Alias CS65X_2(1) = VWC_2
+Alias CS65X_2(2) = EC_2
+Alias CS65X_2(3) = T_2
+Alias CS65X_3(1) = VWC_3
+Alias CS65X_3(2) = EC_3
+Alias CS65X_3(3) = T_3
+Alias TEROS_4(1) = MP_4 
+Alias TEROS_4(2) = T_4
+Alias TEROS_5(1) = MP_5
+Alias TEROS_5(2) = T_5
+
+Alias CVData(1) = SlrFD_W
+Alias CVData(2) = Rain_mm
+Alias CVData(3) = Strikes
+Alias CVData(4) = Dist_km
+Alias CVData(5) = WS_ms
+Alias CVData(6) = WindDir
+Alias CVData(7) = MaxWS_ms
+Alias CVData(8) = AirT_C
+Alias CVData(9) = VP_kPa
+Alias CVData(10) = BP_kPa
+Alias CVData(11) = RH
+Alias CVData(12) = RHT_C
+Alias CVData(13) = TiltNS_deg
+Alias CVData(14) = TiltWE_deg
+
+' Units
+' ----------------------------------------------------
+Units BattV = V
+Units PTemp = °C
+Units VWC_1 = m^3/m^3
+Units EC_1 = dS/m
+Units T_1 = °C
+Units VWC_2 = m^3/m^3
+Units EC_2 = dS/m
+Units T_2 = °C
+Units VWC_3 = m^3/m^3
+Units EC_3 = dS/m
+Units T_3 = °C
+Units MP_4 = kPa
+Units T_4 = °C
+Units MP_5 = kPa
+Units T_5 = °C
+
+Units SlrTF_MJ = MJ/m^2
+Units SlrFD_W = W/m^2
+Units Rain_mm = mm
+Units Strikes = n
+Units Dist_km = km
+Units WS_ms = m/s
+Units WindDir = °
+Units MaxWS_ms = m/s
+Units AirT_C = °C
+Units VP_kPa = kPa
+Units BP_kPa = kPa
+Units RH = %
+Units RHT_C = °C
+Units TiltNS_deg = °
+Units TiltWE_deg = °
+
+' Data Table
+' ----------------------------------------------------
+'log interval data
+DataTable(BDZ_wetland,True,-1)
+	DataInterval(0,LOG_INTERVAL,Min,0)
+	
+	Minimum(1,BattV,FP2,False,False)
+	Average(1,PTemp,FP2,False)
+	Average(1,VWC_1,FP2,False)
+	Average(1,EC_1,FP2,False)
+	Average(1,T_1,FP2,False)
+	Average(1,VWC_2,FP2,False)
+	Average(1,EC_2,FP2,False)
+	Average(1,T_2,FP2,False)
+	Average(1,VWC_3,FP2,False)
+	Average(1,EC_3,FP2,False)
+	Average(1,T_3,FP2,False)
+	Average(1,MP_4,FP2,False)
+	Average(1,T_4,FP2,False)
+	Average(1,MP_5,FP2,False)
+	Average(1,T_5,FP2,False)	
+  
+  Average(1,SlrFD_W,FP2,False)
+  Totalize(1,SlrTF_MJ,IEEE4,False)
+  Totalize(1,Rain_mm,FP2,False)
+  WindVector(1,WS_ms,WindDir,FP2,False,0,0,0)
+  FieldNames("WS_ms_S_WVT,WindDir_D1_WVT,WindDir_SD1_WVT")
+  Maximum(1,MaxWS_ms,FP2,False,True)
+  Totalize(1,Invalid_Wind,FP2,False)
+  Average(1,AirT_C,FP2,False)
+  Maximum(1,AirT_C,FP2,False,True)
+  Minimum(1,AirT_C,FP2,False,True)
+  Average(1,VP_kPa,IEEE4,False)
+  Sample(1,BP_kPa,IEEE4)
+  Maximum(1,BP_kPa,IEEE4,False,True)
+  Minimum(1,BP_kPa,IEEE4,False,True)
+  Sample(1,RH,FP2)
+  Average(1,RHT_C,FP2,False)
+  Average(1,TiltNS_deg,FP2,False)
+  Average(1,TiltWE_deg,FP2,False)
+  Totalize(1,Strikes,FP2,False)
+  Minimum(1,Dist_km,FP2,False,True)
+  Sample(1,CVMeta,String)
+	
+EndTable
+
+'daily summary data
+DataTable(BDZ_wetland_day,True,-1)
+	DataInterval(0,1,Day,0)
+	
+	Minimum(1,BattV,FP2,False,False)
+	Average(1,VWC_1,FP2,False)
+	Average(1,EC_1,FP2,False)
+	Average(1,T_1,FP2,False)
+	Average(1,VWC_2,FP2,False)
+	Average(1,EC_2,FP2,False)
+	Average(1,T_2,FP2,False)
+	Average(1,VWC_3,FP2,False)
+	Average(1,EC_3,FP2,False)
+	Average(1,T_3,FP2,False)
+	Average(1,MP_4,FP2,False)
+	Average(1,T_4,FP2,False)
+	Average(1,MP_5,FP2,False)
+	Average(1,T_5,FP2,False)	
+  
+  Average(1,SlrFD_W,FP2,False)
+  Totalize(1,SlrTF_MJ,IEEE4,False)
+  Totalize(1,Rain_mm,FP2,False)
+  Average(1,WS_ms,IEEE4,False)
+  Average(1,WindDir,IEEE4,False)
+  Maximum(1,MaxWS_ms,FP2,False,True)
+  Totalize(1,Invalid_Wind,FP2,False)
+  Average(1,AirT_C,FP2,False)
+  Maximum(1,AirT_C,FP2,False,True)
+  Minimum(1,AirT_C,FP2,False,True)
+  Average(1,VP_kPa,IEEE4,False)
+  Average(1,BP_kPa,IEEE4,True)
+  Maximum(1,BP_kPa,IEEE4,False,True)
+  Minimum(1,BP_kPa,IEEE4,False,True)
+  Average(1,RH,FP2,True)
+  Maximum(1,RH,FP2,False,True)
+  Minimum(1,RH,FP2,False,True)
+  Average(1,RHT_C,FP2,False)
+  Totalize(1,Strikes,FP2,False)
+  Minimum(1,Dist_km,FP2,False,True)
+  Sample(1,CVMeta,String)
+	
+EndTable
+
+' ====================================================
+' Logger program
+' ====================================================
+
+' Main Program
+' ----------------------------------------------------
+BeginProg
+  
+  'Reset invalid wind measurements
+  WSprev = 0
+  WindDirprev = 0
+  MaxWSprev = 0
+  Invalid_Wind = False
+  
+	'Main Scan
+	Scan(SCAN_INTERVAL,Min,1,0)
+	  
+		'Default Datalogger Battery Voltage measurement 'BattV'
+		Battery(BattV)
+		'Default Datalogger Wiring Panel Temperature measurement 'PTemp_C'
+		PanelTemp(PTemp,50)
+		'CS650/655 Water Content Reflectometer measurements 'VWC_1', 'EC_1', and 'T_1'
+		SDI12Recorder(CS65X_1(),C3,"0","M!",1,0)
+		'CS650/655 Water Content Reflectometer measurements 'VWC_2', 'EC_2', and 'T_2'
+		SDI12Recorder(CS65X_2(),C3,"1","M!",1,0)
+		'CS650/655 Water Content Reflectometer measurements 'VWC_3', 'EC_3', and 'T_3'
+		SDI12Recorder(CS65X_3(),C3,"2","M!",1,0)
+		'TEROS21 matric potential measurements 'MP_4' and 'T_4'
+		SDI12Recorder(TEROS_4(),C5,"4","R0!",1,0)
+		'TEROS21 matric potential measurements 'MP_5' and 'T_5'
+		SDI12Recorder(TEROS_5(),C5,"5","R0!",1,0)		
+    
+    'CV50 meta data
+    SDI12Recorder(CVMeta,C1,9,"I!",1,0)
+    'Get data from ClimaVUE 50 Compact Digital Weather Sensor
+    '-> The R7! command needs to be sent with >10s scan interval.
+    SDI12Recorder(CVData(),C1,9,"R7!",1,0)
+    
+    'Weather station conversions and corrections
+    'Flag and correct invalid wind readings
+    '-> High winds with rain can temporarily interfere with sonic wind measurements causing the
+    '   sensor to output invalid winds of -9999 OR -9990.
+    '-> The following instructions set all wind measurements less than 0 to the previous valid
+    '   wind measurements. This will "flat-line" the measurements until the sensor is able to
+    '   make good readings again. The Invalid_Wind variable will be set to 1 when a wind
+    '   measurement is invalid. For troubleshooting purposes, it is highly recommended that you
+    '-> Totalize the Invalid_Wind variable in any output tables you define that include wind
+    '   speed AND/OR direction data from the ClimaVUE 50.
+    If WS_ms < 0 Then
+      WS_ms = WSprev
+      WindDir = WindDirprev
+      MaxWS_ms = MaxWSprev
+      Invalid_Wind = 1
+    Else
+      Invalid_Wind = 0
+    EndIf
+    WSprev = WS_ms
+    WindDirprev = WindDir
+    MaxWSprev = MaxWS_ms
+    'Correct barometric pressure in kPa to sea level
+    BP_kPa = BP_kPa + SEALEVELADJ
+    'Convert fractional relative humidity into percent relative humidity
+    RH = RH*100
+    'Calculate total solar flux in MJ/m^2 from flux density in W/m^2
+    SlrTF_MJ = SlrFD_W*((SCAN_INTERVAL*60)/1000000)
+		
+		'Call Data Tables and Store Data
+		CallTable BDZ_wetland
+		CallTable BDZ_wetland_day
+		
+	NextScan
+EndProg
+
