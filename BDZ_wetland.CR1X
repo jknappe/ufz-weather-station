@@ -1,6 +1,8 @@
 ' Program for CR1000X data logger: BDZ
 ' ====================================================
 
+' Author: Jan Knappe (jan.knappe@gmail.com)
+
 ' This program was written to collect data on a CR1000X data logger with the
 ' following sensors attached:
 '  - 1x Campbell ClimaVue50 weather station (measuring air temperature, 
@@ -20,10 +22,15 @@
 '    -> SDI-12 address: 4, 5
 '  - additional measurements of logger battery voltage and panel temperature
 
-' Date: 2022-01-04
-' Version: 0.1
-' Author: Jan Knappe (jan.knappe@gmail.com)
-
+' Data is written into the following data files:
+'  - BDZ_wetland_all: contains data from the soil sensors and weather station
+'                     on the lowest logging interval 
+'  - BDZ_wetland_day: contains data from the soil sensors and weather station
+'                     as daily aggregates 
+'  - BDZ_weather_all: contains selected data from the weather station
+'                     on the lowest logging interval 
+'  - BDZ_weather_day: contains selected data from the weather station
+'                     as daily aggregates 
 
 ' ====================================================
 ' Definitions
@@ -118,7 +125,7 @@ Units RHT_C = °C
 Units TiltNS_deg = °
 Units TiltWE_deg = °
 
-' Data Table
+' Data Table (wetland)
 ' ----------------------------------------------------
 'log interval data
 DataTable(BDZ_wetland_all,True,-1)
@@ -151,9 +158,7 @@ DataTable(BDZ_wetland_all,True,-1)
   Maximum(1,AirT_C,FP2,False,True)
   Minimum(1,AirT_C,FP2,False,True)
   Average(1,VP_kPa,IEEE4,False)
-  Sample(1,BP_kPa,IEEE4)
-  Maximum(1,BP_kPa,IEEE4,False,True)
-  Minimum(1,BP_kPa,IEEE4,False,True)
+  Average(1,BP_kPa,IEEE4,False)
   Sample(1,RH,FP2)
   Average(1,RHT_C,FP2,False)
   Average(1,TiltNS_deg,FP2,False)
@@ -204,6 +209,52 @@ DataTable(BDZ_wetland_day,True,-1)
   Totalize(1,Strikes,FP2,False)
   Minimum(1,Dist_km,FP2,False,True)
   Sample(1,CVMeta,String)
+	
+EndTable
+
+' Data Table (weather)
+' ----------------------------------------------------
+'log interval data
+DataTable(BDZ_weather_all,True,-1)
+	DataInterval(0,LOG_INTERVAL,Min,0)
+  
+  Average(1,SlrFD_W,FP2,False)
+  Totalize(1,SlrTF_MJ,IEEE4,False)
+  Totalize(1,Rain_mm,FP2,False)
+  WindVector(1,WS_ms,WindDir,FP2,False,0,0,0)
+  FieldNames("WS_ms_S_WVT,WindDir_D1_WVT,WindDir_SD1_WVT")
+  Maximum(1,MaxWS_ms,FP2,False,True)
+  Totalize(1,Invalid_Wind,FP2,False)
+  Average(1,AirT_C,FP2,False)
+  Maximum(1,AirT_C,FP2,False,True)
+  Minimum(1,AirT_C,FP2,False,True)
+  Average(1,VP_kPa,IEEE4,False)
+  Average(1,BP_kPa,IEEE4,False)
+  Sample(1,RH,FP2)
+	
+EndTable
+
+'daily summary data
+DataTable(BDZ_weather_day,True,-1)
+	DataInterval(0,1,Day,0)
+	
+  Average(1,SlrFD_W,FP2,False)
+  Totalize(1,SlrTF_MJ,IEEE4,False)
+  Totalize(1,Rain_mm,FP2,False)
+  Average(1,WS_ms,IEEE4,False)
+  Average(1,WindDir,IEEE4,False)
+  Maximum(1,MaxWS_ms,FP2,False,True)
+  Totalize(1,Invalid_Wind,FP2,False)
+  Average(1,AirT_C,FP2,False)
+  Maximum(1,AirT_C,FP2,False,True)
+  Minimum(1,AirT_C,FP2,False,True)
+  Average(1,VP_kPa,IEEE4,False)
+  Average(1,BP_kPa,IEEE4,True)
+  Maximum(1,BP_kPa,IEEE4,False,True)
+  Minimum(1,BP_kPa,IEEE4,False,True)
+  Average(1,RH,FP2,True)
+  Maximum(1,RH,FP2,False,True)
+  Minimum(1,RH,FP2,False,True)
 	
 EndTable
 
@@ -276,6 +327,8 @@ BeginProg
 		'Call Data Tables and Store Data
 		CallTable BDZ_wetland_all
 		CallTable BDZ_wetland_day
+		CallTable BDZ_weather_all
+		CallTable BDZ_weather_day
 		
 	NextScan
 EndProg
