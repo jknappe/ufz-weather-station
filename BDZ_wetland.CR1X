@@ -121,7 +121,7 @@ Units TiltWE_deg = °
 ' Data Table
 ' ----------------------------------------------------
 'log interval data
-DataTable(BDZ_wetland,True,-1)
+DataTable(BDZ_wetland_all,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
 	
 	Minimum(1,BattV,FP2,False,False)
@@ -274,7 +274,7 @@ BeginProg
     SlrTF_MJ = SlrFD_W*((SCAN_INTERVAL*60)/1000000)
 		
 		'Call Data Tables and Store Data
-		CallTable BDZ_wetland
+		CallTable BDZ_wetland_all
 		CallTable BDZ_wetland_day
 		
 	NextScan
