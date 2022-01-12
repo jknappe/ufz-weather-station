@@ -58,7 +58,10 @@ Public CVMeta As String * 40
 Public WSprev
 Public WindDirprev
 Public MaxWSprev
-Public Invalid_Wind As Long
+
+Public Invalid_Wind As Long  'number of invalid wind measurements
+Public N_meas                'number of measurements per log interval
+Dim Count_meas               'Counter for measurements per log interval
 
 ' Aliases
 ' ----------------------------------------------------
@@ -130,7 +133,8 @@ Units TiltWE_deg = °
 'log interval data
 DataTable(BDZ_wetland_all,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
-	
+	 
+  Sample(1,N_meas,FP2)  
 	Minimum(1,BattV,FP2,False,False)
 	Average(1,PTemp,FP2,False)
 	Average(1,VWC_1,FP2,False)
@@ -173,6 +177,7 @@ EndTable
 DataTable(BDZ_wetland_day,True,-1)
 	DataInterval(0,1,Day,0)
 	
+  Sample(1,N_meas,FP2)  
 	Minimum(1,BattV,FP2,False,False)
 	Average(1,VWC_1,FP2,False)
 	Average(1,EC_1,FP2,False)
@@ -218,6 +223,7 @@ EndTable
 DataTable(BDZ_weather_all,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
   
+  Sample(1,N_meas,FP2)  
   Average(1,SlrFD_W,FP2,False)
   Totalize(1,SlrTF_MJ,IEEE4,False)
   Totalize(1,Rain_mm,FP2,False)
@@ -238,6 +244,7 @@ EndTable
 DataTable(BDZ_weather_day,True,-1)
 	DataInterval(0,1,Day,0)
 	
+  Sample(1,N_meas,FP2)  
   Average(1,SlrFD_W,FP2,False)
   Totalize(1,SlrTF_MJ,IEEE4,False)
   Totalize(1,Rain_mm,FP2,False)
@@ -273,7 +280,11 @@ BeginProg
   Invalid_Wind = False
   
 	'Main Scan
-	Scan(SCAN_INTERVAL,Min,1,0)
+	Scan(SCAN_INTERVAL,Min,1,0)	  	
+    
+    'Count number of measurements per log interval
+  	Count_meas = Count_meas + 1
+	  N_meas = Count_meas
 	  
 		'Default Datalogger Battery Voltage measurement 'BattV'
 		Battery(BattV)
@@ -323,6 +334,11 @@ BeginProg
     RH = RH*100
     'Calculate total solar flux in MJ/m^2 from flux density in W/m^2
     SlrTF_MJ = SlrFD_W*((SCAN_INTERVAL*60)/1000000)
+    
+    If TimeIntoInterval(0,LOG_INTERVAL,Min) Then	
+      'reset counters  
+      Count_meas = 0
+    EndIf
 		
 		'Call Data Tables and Store Data
 		CallTable BDZ_wetland_all
