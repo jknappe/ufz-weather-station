@@ -9,11 +9,15 @@
 '    barometric pressure, lightning average distance, lightning strike count, 
 '    precipitation, relative humidity, solar radiation, tilt, wind direction, 
 '    and wind speed)
-'    -> connected on C1
 '    -> SDI-12 address: 9
+'    -> connection:
+'        C5:  SDI-12 (white)
+'        GND: Shield/Signal ground (clear)
+'        12V: Power (brown)
+'        G:   Power ground (black)
 '  - 4x UGT tipping bucket counter as part of the combined outflow measurement
 '    system (consisting of tipping bucket + Thomson weir)
-'    -> connected on ??
+'    -> connected on
 '  - 4x Keller relative pressure sensor as part of the combined outflow 
 '    measurement system (consisting of tipping bucket + Thomson weir)
 '    -> connected on ??
@@ -25,11 +29,13 @@
 
 ' Data is written into the following data files:
 '  - FGD_outflow_all: contains data from the outflow measurements only
-'                     on the lowest logging interval 
+'                     on the determined logging interval 
+'  - FGD_outflow_sec: contains data from the outflow measurements only
+'                     with one observation every second
 '  - FGD_outflow_day: contains data from the outflow measurements only
 '                     as daily aggregates 
 '  - FGD_weather_all: contains selected data from the weather station only
-'                     on the lowest logging interval 
+'                     on the determined logging interval 
 '  - FGD_weather_day: contains selected data from the weather station only
 '                     as daily aggregates 
 
@@ -47,11 +53,6 @@ Const SEALEVELADJ = 12.78856  'adjusting barometer to sea level (elevation = 107
 ' ----------------------------------------------------
 Public BattV                 'Battery voltage
 Public PTemp                 'Internal panel temperature
-Public CS65X_1(3)            'Soil sensor SDI-12 output
-Public CS65X_2(3)            'Soil sensor SDI-12 output
-Public CS65X_3(3)            'Soil sensor SDI-12 output
-Public TEROS_4(2)            'Soil sensor SDI-12 output
-Public TEROS_5(2)            'Soil sensor SDI-12 output
 
 Public CVData(14)            'ClimaVue SDI-12 output
 Public SlrTF_MJ              'ClimaVue total solar flux
@@ -66,20 +67,6 @@ Dim Count_meas               'Counter for measurements per log interval
 
 ' Aliases
 ' ----------------------------------------------------
-Alias CS65X_1(1) = VWC_1
-Alias CS65X_1(2) = EC_1
-Alias CS65X_1(3) = T_1
-Alias CS65X_2(1) = VWC_2
-Alias CS65X_2(2) = EC_2
-Alias CS65X_2(3) = T_2
-Alias CS65X_3(1) = VWC_3
-Alias CS65X_3(2) = EC_3
-Alias CS65X_3(3) = T_3
-Alias TEROS_4(1) = MP_4 
-Alias TEROS_4(2) = T_4
-Alias TEROS_5(1) = MP_5
-Alias TEROS_5(2) = T_5
-
 Alias CVData(1) = SlrFD_W
 Alias CVData(2) = Rain_mm
 Alias CVData(3) = Strikes
@@ -99,19 +86,6 @@ Alias CVData(14) = TiltWE_deg
 ' ----------------------------------------------------
 Units BattV = V
 Units PTemp = °C
-Units VWC_1 = m^3/m^3
-Units EC_1 = dS/m
-Units T_1 = °C
-Units VWC_2 = m^3/m^3
-Units EC_2 = dS/m
-Units T_2 = °C
-Units VWC_3 = m^3/m^3
-Units EC_3 = dS/m
-Units T_3 = °C
-Units MP_4 = kPa
-Units T_4 = °C
-Units MP_5 = kPa
-Units T_5 = °C
 
 Units SlrTF_MJ = MJ/m^2
 Units SlrFD_W = W/m^2
@@ -129,10 +103,10 @@ Units RHT_C = °C
 Units TiltNS_deg = °
 Units TiltWE_deg = °
 
-' Data Table (wetland)
+' Data Table (outflow)
 ' ----------------------------------------------------
 'log interval data
-DataTable(BDZ_wetland_all,True,-1)
+DataTable(FGD_outflow_all,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
 	 
   Sample(1,N_meas,FP2)  
@@ -175,7 +149,7 @@ DataTable(BDZ_wetland_all,True,-1)
 EndTable
 
 'daily summary data
-DataTable(BDZ_wetland_day,True,-1)
+DataTable(FGD_outflow_day,True,-1)
 	DataInterval(0,1,Day,0)
 	
   Sample(1,N_meas,FP2)  
@@ -221,7 +195,7 @@ EndTable
 ' Data Table (weather)
 ' ----------------------------------------------------
 'log interval data
-DataTable(BDZ_weather_all,True,-1)
+DataTable(FGD_weather_all,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
   
   Sample(1,N_meas,FP2)  
@@ -242,7 +216,7 @@ DataTable(BDZ_weather_all,True,-1)
 EndTable
 
 'daily summary data
-DataTable(BDZ_weather_day,True,-1)
+DataTable(FGD_weather_day,True,-1)
 	DataInterval(0,1,Day,0)
 	
   Sample(1,N_meas,FP2)  
@@ -272,7 +246,39 @@ EndTable
 
 ' Main Program
 ' ----------------------------------------------------
-BeginProg
+BeginProg    
+	Scan(SCAN_INTERVAL,Sec,1,0)	 
+	
+  'Measurements every second
+  '-----------------------------------
+  
+  	'Count number of measurements per log interval
+  	Count_sec = Count_sec + 1
+	  N_sec = Count_sec
+	  
+    'Read tipping bucket outflow counters
+    PulseCount(outflow_tip_grv_count,1,C1,2,0,1,0)
+    PulseCount(outflow_tip_int_count,1,C2,2,0,1,0)
+    PulseCount(outflow_tip_wet_count,1,C3,2,0,1,0)
+    PulseCount(outflow_tip_ext_count,1,C4,2,0,1,0)
+    
+    'Convert tips to outflow
+     outflow_tip_grv_flow = outflow_tip_grv_count *  outflow_tip_mult
+     outflow_tip_int_flow = outflow_tip_int_count *  outflow_tip_mult
+     outflow_tip_wet_flow = outflow_tip_wet_count *  outflow_tip_mult
+     outflow_tip_ext_flow = outflow_tip_ext_count *  outflow_tip_mult
+
+
+
+
+
+
+
+
+
+
+
+
   
   'Reset invalid wind measurements
   WSprev = 0
@@ -280,8 +286,7 @@ BeginProg
   MaxWSprev = 0
   Invalid_Wind = False
   
-	'Main Scan
-	Scan(SCAN_INTERVAL,Sec,1,0)	  	
+	'Main Scan 	
     
     'Count number of measurements per log interval
   	Count_meas = Count_meas + 1
@@ -291,16 +296,6 @@ BeginProg
 		Battery(BattV)
 		'Default Datalogger Wiring Panel Temperature measurement 'PTemp_C'
 		PanelTemp(PTemp,50)
-		'CS650/655 Water Content Reflectometer measurements 'VWC_1', 'EC_1', and 'T_1'
-		SDI12Recorder(CS65X_1(),C3,"0","M!",1,0)
-		'CS650/655 Water Content Reflectometer measurements 'VWC_2', 'EC_2', and 'T_2'
-		SDI12Recorder(CS65X_2(),C3,"1","M!",1,0)
-		'CS650/655 Water Content Reflectometer measurements 'VWC_3', 'EC_3', and 'T_3'
-		SDI12Recorder(CS65X_3(),C3,"2","M!",1,0)
-		'TEROS21 matric potential measurements 'MP_4' and 'T_4'
-		SDI12Recorder(TEROS_4(),C5,"4","R0!",1,0)
-		'TEROS21 matric potential measurements 'MP_5' and 'T_5'
-		SDI12Recorder(TEROS_5(),C5,"5","R0!",1,0)		
     
     'CV50 meta data
     SDI12Recorder(CVMeta,C1,9,"I!",1,0)
@@ -342,10 +337,11 @@ BeginProg
     EndIf
 		
 		'Call Data Tables and Store Data
-		CallTable BDZ_wetland_all
-		CallTable BDZ_wetland_day
-		CallTable BDZ_weather_all
-		CallTable BDZ_weather_day
+		CallTable FGD_outflow_all
+		CallTable FGD_outflow_sec
+		CallTable FGD_outflow_day
+		CallTable FGD_weather_all
+		CallTable FGD_weather_day
 		
 	NextScan
 EndProg
