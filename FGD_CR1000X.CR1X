@@ -56,7 +56,6 @@
 
 ' Constants
 ' ----------------------------------------------------
-Const SCAN_INTERVAL = 1       'logger scan interval (in seconds)
 Const LOG_INTERVAL = 5        'data logging interval (in minutes)
 Const SEALEVELADJ = 12.78856  'adjusting barometer to sea level (elevation = 107 m)
 
@@ -70,6 +69,31 @@ Const X_INT = 127.6           'offset for pressure sensor reading (extensive roo
 Public BattV                 'Battery voltage
 Public PTemp                 'Internal panel temperature
 
+Public Rain_RG_mm            'Heated rain gauge precipitation
+
+Public grv_tip_L             'Tipping bucket discharge gravel roof
+Public ext_tip_L             'Tipping bucket discharge extensive roof
+Public wet_tip_L             'Tipping bucket discharge wetland roof
+Public int_tip_L             'Tipping bucket discharge intensive roof
+
+Public grv_pres_mv           'Thomson weir discharge gravel roof (sensor signal, mV)
+Public ext_pres_mv           'Thomson weir discharge extensive roof (sensor signal, mV)
+Public wet_pres_mv           'Thomson weir discharge wetland roof (sensor signal, mV)
+Public int_pres_mv           'Thomson weir discharge intensive roof (sensor signal, mV)
+Public grv_pres_mm           'Thomson weir discharge gravel roof (Ueberstauhoehe s, mm)
+Public ext_pres_mm           'Thomson weir discharge extensive roof (Ueberstauhoehe s, mm)
+Public wet_pres_mm           'Thomson weir discharge wetland roof (Ueberstauhoehe s, mm)
+Public int_pres_mm           'Thomson weir discharge intensive roof (Ueberstauhoehe s, mm)
+Public grv_pres_L            'Thomson weir discharge gravel roof (total discharge per time unit, L)
+Public ext_pres_L            'Thomson weir discharge extensive roof (total discharge per time unit, L)
+Public wet_pres_L            'Thomson weir discharge wetland roof (total discharge per time unit, L)
+Public int_pres_L            'Thomson weir discharge intensive roof (total discharge per time unit, L)
+
+Public grv_tot_L             'Total discharge gravel roof (total discharge per time unit, L)
+Public ext_tot_L             'Total discharge extensive roof (total discharge per time unit, L)
+Public wet_tot_L             'Total discharge wetland roof (total discharge per time unit, L)
+Public int_tot_L             'Total discharge intensive roof (total discharge per time unit, L)
+
 Public CVData(14)            'ClimaVue SDI-12 output
 Public SlrTF_MJ              'ClimaVue total solar flux
 Public WSprev                'ClimaVue temporary windspeed
@@ -78,18 +102,19 @@ Public MaxWSprev             'ClimaVue temporary maximum windspeed
 Public CVMeta As String * 40 'ClimaVue meta data
 
 Public Invalid_Wind As Long  'number of invalid wind measurements
-Public N_meas                'number of measurements per log interval
-Dim Count_meas               'Counter for measurements per log interval
+Public N_sec                'number of measurements per log interval
 
-' Aliases
+Dim Count_sec                'Counter for #second measurements per log interval
+
+' Aliases for ClimaVue output
 ' ----------------------------------------------------
 Alias CVData(1) = SlrFD_W
-Alias CVData(2) = Rain_mm
+Alias CVData(2) = Rain_CV_mm
 Alias CVData(3) = Strikes
 Alias CVData(4) = Dist_km
 Alias CVData(5) = WS_ms
 Alias CVData(6) = WindDir
-Alias CVData(7) = MaxWS_ms
+Alias CVData(7) = WS_ms_Max
 Alias CVData(8) = AirT_C
 Alias CVData(9) = VP_kPa
 Alias CVData(10) = BP_kPa
@@ -103,14 +128,39 @@ Alias CVData(14) = TiltWE_deg
 Units BattV = V
 Units PTemp = °C
 
+Units Rain_RG_mm = mm
+
+Units grv_tip_L = L
+Units ext_tip_L = L
+Units wet_tip_L = L
+Units int_tip_L = L
+
+Units grv_pres_mv = mV
+Units ext_pres_mv = mV
+Units wet_pres_mv = mV
+Units int_pres_mv = mV
+Units grv_pres_mm = mm
+Units ext_pres_mm = mm
+Units wet_pres_mm = mm
+Units int_pres_mm = mm
+Units grv_pres_L = L
+Units ext_pres_L = L
+Units wet_pres_L = L
+Units int_pres_L = L
+
+Units grv_tot_L = L
+Units ext_tot_L = L
+Units wet_tot_L = L
+Units int_tot_L = L
+
 Units SlrTF_MJ = MJ/m^2
 Units SlrFD_W = W/m^2
-Units Rain_mm = mm
+Units Rain_CV_mm = mm
 Units Strikes = n
 Units Dist_km = km
 Units WS_ms = m/s
 Units WindDir = °
-Units MaxWS_ms = m/s
+Units WS_ms_Max = m/s
 Units AirT_C = °C
 Units VP_kPa = kPa
 Units BP_kPa = kPa
@@ -121,113 +171,108 @@ Units TiltWE_deg = °
 
 ' Data Table (outflow)
 ' ----------------------------------------------------
-'log interval data
-DataTable(FGD_outflow_all,True,-1)
+'1 sec data
+DataTable(FGD_outflow_sec,True,-1)
+	DataInterval(0,1,Sec,0)
+	 
+  Sample(1,N_sec,UINT4)
+  
+  Totalize(1,grv_tip_L,FP2,False)
+  Totalize(1,ext_tip_L,FP2,False)
+  Totalize(1,wet_tip_L,FP2,False)
+  Totalize(1,int_tip_L,FP2,False)
+  
+  Sample(1,grv_pres_mv,FP2)
+  Sample(1,ext_pres_mv,FP2)
+  Sample(1,wet_pres_mv,FP2)
+  Sample(1,int_pres_mv,FP2)
+  
+  Sample(1,grv_pres_mm,FP2)
+  Sample(1,ext_pres_mm,FP2)
+  Sample(1,wet_pres_mm,FP2)
+  Sample(1,int_pres_mm,FP2)
+  
+  Totalize(1,grv_pres_L,FP2,False)
+  Totalize(1,ext_pres_L,FP2,False)
+  Totalize(1,wet_pres_L,FP2,False)
+  Totalize(1,int_pres_L,FP2,False)
+  
+  Totalize(1,grv_tot_L,FP2,False)
+  Totalize(1,ext_tot_L,FP2,False)
+  Totalize(1,wet_tot_L,FP2,False)
+  Totalize(1,int_tot_L,FP2,False)
+	
+EndTable
+
+'5 min data
+DataTable(FGD_outflow_5min,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
 	 
-  Sample(1,N_meas,FP2)  
-	Minimum(1,BattV,FP2,False,False)
-	Average(1,PTemp,FP2,False)
-	Average(1,VWC_1,FP2,False)
-	Average(1,EC_1,FP2,False)
-	Average(1,T_1,FP2,False)
-	Average(1,VWC_2,FP2,False)
-	Average(1,EC_2,FP2,False)
-	Average(1,T_2,FP2,False)
-	Average(1,VWC_3,FP2,False)
-	Average(1,EC_3,FP2,False)
-	Average(1,T_3,FP2,False)
-	Average(1,MP_4,FP2,False)
-	Average(1,T_4,FP2,False)
-	Average(1,MP_5,FP2,False)
-	Average(1,T_5,FP2,False)	
+  Sample(1,N_sec,UINT4)
   
-  Average(1,SlrFD_W,FP2,False)
-  Totalize(1,SlrTF_MJ,IEEE4,False)
-  Totalize(1,Rain_mm,FP2,False)
-  WindVector(1,WS_ms,WindDir,FP2,False,0,0,0)
-  FieldNames("WS_ms_S_WVT,WindDir_D1_WVT,WindDir_SD1_WVT")
-  Maximum(1,MaxWS_ms,FP2,False,True)
-  Totalize(1,Invalid_Wind,FP2,False)
-  Average(1,AirT_C,FP2,False)
-  Maximum(1,AirT_C,FP2,False,True)
-  Minimum(1,AirT_C,FP2,False,True)
-  Average(1,VP_kPa,IEEE4,False)
-  Average(1,BP_kPa,IEEE4,False)
-  Sample(1,RH,FP2)
-  Average(1,RHT_C,FP2,False)
-  Average(1,TiltNS_deg,FP2,False)
-  Average(1,TiltWE_deg,FP2,False)
-  Totalize(1,Strikes,FP2,False)
-  Minimum(1,Dist_km,FP2,False,True)
-  Sample(1,CVMeta,String)
+  Totalize(1,grv_tip_L,FP2,False)
+  Totalize(1,ext_tip_L,FP2,False)
+  Totalize(1,wet_tip_L,FP2,False)
+  Totalize(1,int_tip_L,FP2,False)
+  
+  Totalize(1,grv_pres_L,FP2,False)
+  Totalize(1,ext_pres_L,FP2,False)
+  Totalize(1,wet_pres_L,FP2,False)
+  Totalize(1,int_pres_L,FP2,False)
+  
+  Totalize(1,grv_tot_L,FP2,False)
+  Totalize(1,ext_tot_L,FP2,False)
+  Totalize(1,wet_tot_L,FP2,False)
+  Totalize(1,int_tot_L,FP2,False)
 	
 EndTable
 
 'daily summary data
 DataTable(FGD_outflow_day,True,-1)
 	DataInterval(0,1,Day,0)
-	
-  Sample(1,N_meas,FP2)  
-	Minimum(1,BattV,FP2,False,False)
-	Average(1,VWC_1,FP2,False)
-	Average(1,EC_1,FP2,False)
-	Average(1,T_1,FP2,False)
-	Average(1,VWC_2,FP2,False)
-	Average(1,EC_2,FP2,False)
-	Average(1,T_2,FP2,False)
-	Average(1,VWC_3,FP2,False)
-	Average(1,EC_3,FP2,False)
-	Average(1,T_3,FP2,False)
-	Average(1,MP_4,FP2,False)
-	Average(1,T_4,FP2,False)
-	Average(1,MP_5,FP2,False)
-	Average(1,T_5,FP2,False)	
+	 
+  Sample(1,N_sec,UINT4)
   
-  Average(1,SlrFD_W,FP2,False)
-  Totalize(1,SlrTF_MJ,IEEE4,False)
-  Totalize(1,Rain_mm,FP2,False)
-  Average(1,WS_ms,IEEE4,False)
-  Average(1,WindDir,IEEE4,False)
-  Maximum(1,MaxWS_ms,FP2,False,True)
-  Totalize(1,Invalid_Wind,FP2,False)
-  Average(1,AirT_C,FP2,False)
-  Maximum(1,AirT_C,FP2,False,True)
-  Minimum(1,AirT_C,FP2,False,True)
-  Average(1,VP_kPa,IEEE4,False)
-  Average(1,BP_kPa,IEEE4,True)
-  Maximum(1,BP_kPa,IEEE4,False,True)
-  Minimum(1,BP_kPa,IEEE4,False,True)
-  Average(1,RH,FP2,True)
-  Maximum(1,RH,FP2,False,True)
-  Minimum(1,RH,FP2,False,True)
-  Average(1,RHT_C,FP2,False)
-  Totalize(1,Strikes,FP2,False)
-  Minimum(1,Dist_km,FP2,False,True)
-  Sample(1,CVMeta,String)
-	
+  Totalize(1,grv_tip_L,FP2,False)
+  Totalize(1,ext_tip_L,FP2,False)
+  Totalize(1,wet_tip_L,FP2,False)
+  Totalize(1,int_tip_L,FP2,False)
+  
+  Totalize(1,grv_pres_L,FP2,False)
+  Totalize(1,ext_pres_L,FP2,False)
+  Totalize(1,wet_pres_L,FP2,False)
+  Totalize(1,int_pres_L,FP2,False)
+  
+  Totalize(1,grv_tot_L,FP2,False)
+  Totalize(1,ext_tot_L,FP2,False)
+  Totalize(1,wet_tot_L,FP2,False)
+  Totalize(1,int_tot_L,FP2,False)
+  
 EndTable
 
 ' Data Table (weather)
 ' ----------------------------------------------------
 'log interval data
-DataTable(FGD_weather_all,True,-1)
+DataTable(FGD_weather_5min,True,-1)
 	DataInterval(0,LOG_INTERVAL,Min,0)
-  
-  Sample(1,N_meas,FP2)  
-  Average(1,SlrFD_W,FP2,False)
-  Totalize(1,SlrTF_MJ,IEEE4,False)
-  Totalize(1,Rain_mm,FP2,False)
-  WindVector(1,WS_ms,WindDir,FP2,False,0,0,0)
-  FieldNames("WS_ms_S_WVT,WindDir_D1_WVT,WindDir_SD1_WVT")
-  Maximum(1,MaxWS_ms,FP2,False,True)
-  Totalize(1,Invalid_Wind,FP2,False)
-  Average(1,AirT_C,FP2,False)
-  Maximum(1,AirT_C,FP2,False,True)
-  Minimum(1,AirT_C,FP2,False,True)
-  Average(1,VP_kPa,IEEE4,False)
-  Average(1,BP_kPa,IEEE4,False)
+	
+  Totalize(1,Rain_CV_mm,FP2,False)
+  Totalize(1,Rain_RG_mm,FP2,False)
+  Sample(1,AirT_C,FP2)
+  WindVector(1,WS_ms,WindDir,FP2,False,0,0,2)
+    FieldNames("WS_ms_Avg,WS_ms_SD,WDir_Avg,WDir_SD")
+    Maximum(1,WS_ms_Max,FP2,False,True)
+    Totalize(1,Invalid_Wind,FP2,False)
+  Sample(1,SlrFD_W,FP2)
+  Totalize(1,SlrTF_MJ,FP2,False)
+  Sample(1,VP_kPa,FP2)
+  Sample(1,BP_kPa,FP2)
   Sample(1,RH,FP2)
+  Sample(1,RHT_C,FP2)
+  Sample(1,TiltNS_deg,FP2)
+  Sample(1,TiltWE_deg,FP2)
+  Totalize(1,Strikes,FP2,False)
+  Minimum(1,Dist_km,FP2,False,True)
 	
 EndTable
 
@@ -235,24 +280,34 @@ EndTable
 DataTable(FGD_weather_day,True,-1)
 	DataInterval(0,1,Day,0)
 	
-  Sample(1,N_meas,FP2)  
-  Average(1,SlrFD_W,FP2,False)
-  Totalize(1,SlrTF_MJ,IEEE4,False)
-  Totalize(1,Rain_mm,FP2,False)
-  Average(1,WS_ms,IEEE4,False)
-  Average(1,WindDir,IEEE4,False)
-  Maximum(1,MaxWS_ms,FP2,False,True)
-  Totalize(1,Invalid_Wind,FP2,False)
+  Totalize(1,Rain_CV_mm,FP2,False)
+  Totalize(1,Rain_RG_mm,FP2,False)
   Average(1,AirT_C,FP2,False)
-  Maximum(1,AirT_C,FP2,False,True)
-  Minimum(1,AirT_C,FP2,False,True)
-  Average(1,VP_kPa,IEEE4,False)
-  Average(1,BP_kPa,IEEE4,True)
-  Maximum(1,BP_kPa,IEEE4,False,True)
-  Minimum(1,BP_kPa,IEEE4,False,True)
-  Average(1,RH,FP2,True)
-  Maximum(1,RH,FP2,False,True)
-  Minimum(1,RH,FP2,False,True)
+    Maximum(1,AirT_C,FP2,False,True)
+    Minimum(1,AirT_C,FP2,False,True)
+  WindVector(1,WS_ms,WindDir,FP2,False,0,0,2)
+    FieldNames("WS_ms_Avg,WS_ms_SD,WDir_Avg,WDir_SD")
+    Maximum(1,WS_ms_Max,FP2,False,True)
+    Totalize(1,Invalid_Wind,FP2,False)
+  Average(1,SlrFD_W,FP2,False)
+  Totalize(1,SlrTF_MJ,FP2,False)
+  Average(1,VP_kPa,FP2,False)
+    Maximum(1,VP_kPa,FP2,False,True)
+    Minimum(1,VP_kPa,FP2,False,True)
+  Average(1,BP_kPa,FP2,False)
+    Maximum(1,BP_kPa,FP2,False,True)
+    Minimum(1,BP_kPa,FP2,False,True)
+  Average(1,RH,FP2,False)
+    Maximum(1,RH,FP2,False,True)
+    Minimum(1,RH,FP2,False,True)
+  Average(1,RHT_C,FP2,False)
+    Maximum(1,RHT_C,FP2,False,True)
+    Minimum(1,RHT_C,FP2,False,True)
+  Average(1,TiltNS_deg,FP2,False)
+  Average(1,TiltWE_deg,FP2,False)
+  Totalize(1,Strikes,FP2,False)
+  Minimum(1,Dist_km,FP2,False,True)
+  Sample(1,CVMeta,String)
 	
 EndTable
 
@@ -263,7 +318,7 @@ EndTable
 ' Main Program
 ' ----------------------------------------------------
 BeginProg    
-	Scan(SCAN_INTERVAL,Sec,1,0)	 
+	Scan(1,Sec,1,0)	 
 	
   ' Measurements every second
   '-----------------------------------
@@ -291,91 +346,84 @@ BeginProg
     int_pres_mm = grv_pres_mv * 1.02 * 0.5 - X_INT
     
     'Convert pressure sensor mm to L (Flow over weir, Q)
-    grv_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(grv_pres_mm/1000)) * 0.637 * (grv_pres_mm/1000)^2.5
-    ext_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(ext_pres_mm/1000)) * 0.637 * (ext_pres_mm/1000)^2.5
-    wet_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(wet_pres_mm/1000)) * 0.637 * (wet_pres_mm/1000)^2.5
-    int_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(int_pres_mm/1000)) * 0.637 * (int_pres_mm/1000)^2.5
+    grv_pres_L = 1000 * 2.363 * (0.565 + 0.0087/SQR(grv_pres_mm/1000)) * 0.637 * (grv_pres_mm/1000)^2.5
+    ext_pres_L = 1000 * 2.363 * (0.565 + 0.0087/SQR(ext_pres_mm/1000)) * 0.637 * (ext_pres_mm/1000)^2.5
+    wet_pres_L = 1000 * 2.363 * (0.565 + 0.0087/SQR(wet_pres_mm/1000)) * 0.637 * (wet_pres_mm/1000)^2.5
+    int_pres_L = 1000 * 2.363 * (0.565 + 0.0087/SQR(int_pres_mm/1000)) * 0.637 * (int_pres_mm/1000)^2.5
     
     'Calculate total discharge
     grv_tot_L = grv_tip_L + grv_pres_L
     ext_tot_L = ext_tip_L + ext_pres_L
     wet_tot_L = wet_tip_L + wet_pres_L
     int_tot_L = int_tip_L + int_pres_L
-    
-
-
-
-
-
-
-
-
-
-
-
-
+          
+  ' Measurements every 5 minutes
+  '-----------------------------------
   
-  'Reset invalid wind measurements
-  WSprev = 0
-  WindDirprev = 0
-  MaxWSprev = 0
-  Invalid_Wind = False
-  
-	'Main Scan 	
-    
-    'Count number of measurements per log interval
-  	Count_meas = Count_meas + 1
-	  N_meas = Count_meas
+    If TimeIntoInterval(0,LOG_INTERVAL,Min) Then
+
+      'Reset invalid wind measurements
+      WSprev = 0
+      WindDirprev = 0
+      MaxWSprev = 0
+      Invalid_Wind = False
 	  
-		'Default Datalogger Battery Voltage measurement 'BattV'
-		Battery(BattV)
-		'Default Datalogger Wiring Panel Temperature measurement 'PTemp_C'
-		PanelTemp(PTemp,50)
+		  'Default Datalogger Battery Voltage measurement 'BattV'
+		  Battery(BattV)
+		  'Default Datalogger Wiring Panel Temperature measurement 'PTemp_C'
+		  PanelTemp(PTemp,50)
+		  
+      'Heated raingauge
+      PulseCount(Rain_RG_mm,1,P1,1,0,0.1,0)
     
-    'CV50 meta data
-    SDI12Recorder(CVMeta,C1,9,"I!",1,0)
-    'Get data from ClimaVUE 50 Compact Digital Weather Sensor
-    '-> The R7! command needs to be sent with >10s scan interval.
-    SDI12Recorder(CVData(),C1,9,"R7!",1,0)
+      'CV50 meta data
+      SDI12Recorder(CVMeta,C5,9,"I!",1,0)
+      'Get data from ClimaVUE 50 Compact Digital Weather Sensor
+      '-> The R7! command needs to be sent with >10s scan interval.
+      SDI12Recorder(CVData(),C5,9,"R7!",1,0)
     
-    'Weather station conversions and corrections
-    'Flag and correct invalid wind readings
-    '-> High winds with rain can temporarily interfere with sonic wind measurements causing the
-    '   sensor to output invalid winds of -9999 OR -9990.
-    '-> The following instructions set all wind measurements less than 0 to the previous valid
-    '   wind measurements. This will "flat-line" the measurements until the sensor is able to
-    '   make good readings again. The Invalid_Wind variable will be set to 1 when a wind
-    '   measurement is invalid. For troubleshooting purposes, it is highly recommended that you
-    '-> Totalize the Invalid_Wind variable in any output tables you define that include wind
-    '   speed AND/OR direction data from the ClimaVUE 50.
-    If WS_ms < 0 Then
-      WS_ms = WSprev
-      WindDir = WindDirprev
-      MaxWS_ms = MaxWSprev
-      Invalid_Wind = 1
-    Else
-      Invalid_Wind = 0
-    EndIf
-    WSprev = WS_ms
-    WindDirprev = WindDir
-    MaxWSprev = MaxWS_ms
-    'Correct barometric pressure in kPa to sea level
-    BP_kPa = BP_kPa + SEALEVELADJ
-    'Convert fractional relative humidity into percent relative humidity
-    RH = RH*100
-    'Calculate total solar flux in MJ/m^2 from flux density in W/m^2
-    SlrTF_MJ = SlrFD_W*((SCAN_INTERVAL*60)/1000000)
-    
-    If TimeIntoInterval(0,LOG_INTERVAL,Min) Then	
+      'Weather station conversions and corrections
+      'Flag and correct invalid wind readings
+      '-> High winds with rain can temporarily interfere with sonic wind measurements causing the
+      '   sensor to output invalid winds of -9999 OR -9990.
+      '-> The following instructions set all wind measurements less than 0 to the previous valid
+      '   wind measurements. This will "flat-line" the measurements until the sensor is able to
+      '   make good readings again. The Invalid_Wind variable will be set to 1 when a wind
+      '   measurement is invalid. For troubleshooting purposes, it is highly recommended that you
+      '-> Totalize the Invalid_Wind variable in any output tables you define that include wind
+      '   speed AND/OR direction data from the ClimaVUE 50.
+      If WS_ms < 0 Then
+        WS_ms = WSprev
+        WindDir = WindDirprev
+        WS_ms_Max = MaxWSprev
+        Invalid_Wind = 1
+      Else
+        Invalid_Wind = 0
+      EndIf
+      
+      WSprev = WS_ms
+      WindDirprev = WindDir
+      MaxWSprev = WS_ms_Max
+      
+      'Correct barometric pressure in kPa to sea level
+      BP_kPa = BP_kPa + SEALEVELADJ
+      
+      'Convert fractional relative humidity into percent relative humidity
+      RH = RH*100
+      
+      'Calculate total solar flux in MJ/m^2 from flux density in W/m^2
+      SlrTF_MJ = SlrFD_W*(60/1000000) 
+      
       'reset counters  
-      Count_meas = 0
+      Count_sec = 0
     EndIf
 		
-		'Call Data Tables and Store Data
-		CallTable FGD_outflow_all
+		'Call data tables
 		CallTable FGD_outflow_sec
+		CallTable FGD_outflow_5min
 		CallTable FGD_outflow_day
-		CallTable FGD_weather_all
+		
+		CallTable FGD_weather_5min
 		CallTable FGD_weather_day
 		
 	NextScan
