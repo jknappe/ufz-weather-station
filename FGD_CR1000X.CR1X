@@ -11,19 +11,30 @@
 '    and wind speed)
 '    -> SDI-12 address: 9
 '    -> connection:
-'        C5:  SDI-12 (white)
-'        GND: Shield/Signal ground (clear)
-'        12V: Power (brown)
-'        G:   Power ground (black)
+'        C5  SDI-12 (white)
+'        GND Shield/Signal ground (clear)
+'        12V Power (brown)
+'        G   Power ground (black)
 '  - 4x UGT tipping bucket counter as part of the combined outflow measurement
 '    system (consisting of tipping bucket + Thomson weir)
-'    -> connected on
+'    -> connection:
+'        C1  Gravel roof / Kiesdach
+'        C2  Extensive roof / Extensivdach
+'        C3  Wetland roof / Sumpfpflanzendach
+'        C4  Intensive roof / Intensivdach
+'        GND Shield/Signal ground
 '  - 4x Keller relative pressure sensor as part of the combined outflow 
 '    measurement system (consisting of tipping bucket + Thomson weir)
-'    -> connected on ??
-'    -> NOTE: These sensors are powered externally with 24 VDC!
+'    -> connection:
+'        1H/L Gravel roof / Kiesdach (red/white)
+'        2H/L Extensive roof / Extensivdach (red/white)
+'        3H/L Wetland roof / Sumpfpflanzendach (red/white)
+'        4H/L Intensive roof / Intensivdach (red/white)
+'        12V  Power (black)
 '  - 1x R.M. Young 52202 heated rain gauge 
-'    -> connected on ??
+'    -> connection:
+'        P1  Pulse input (green)
+'        GND Shield/Signal ground (white)
 '    -> NOTE: The heating system is powered externally with 24 VDC!
 '  - additional measurements of logger battery voltage and panel temperature
 
