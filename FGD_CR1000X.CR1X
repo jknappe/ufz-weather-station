@@ -56,9 +56,14 @@
 
 ' Constants
 ' ----------------------------------------------------
-Const SCAN_INTERVAL  =  1     'logger scan interval (in seconds)
-Const LOG_INTERVAL  =  10     'data logging interval (in minutes)
+Const SCAN_INTERVAL = 1       'logger scan interval (in seconds)
+Const LOG_INTERVAL = 5        'data logging interval (in minutes)
 Const SEALEVELADJ = 12.78856  'adjusting barometer to sea level (elevation = 107 m)
+
+Const X_GRV = 126.5           'offset for pressure sensor reading (gravel roof)
+Const X_EXT = 128.0           'offset for pressure sensor reading (intensive roof)
+Const X_WET = 121.9           'offset for pressure sensor reading (wetland roof)
+Const X_INT = 127.6           'offset for pressure sensor reading (extensive roof)
 
 ' Variables
 ' ----------------------------------------------------
@@ -260,7 +265,7 @@ EndTable
 BeginProg    
 	Scan(SCAN_INTERVAL,Sec,1,0)	 
 	
-  'Measurements every second
+  ' Measurements every second
   '-----------------------------------
   
   	'Count number of measurements per log interval
@@ -268,16 +273,35 @@ BeginProg
 	  N_sec = Count_sec
 	  
     'Read tipping bucket outflow counters
-    PulseCount(outflow_tip_grv_count,1,C1,2,0,1,0)
-    PulseCount(outflow_tip_int_count,1,C2,2,0,1,0)
-    PulseCount(outflow_tip_wet_count,1,C3,2,0,1,0)
-    PulseCount(outflow_tip_ext_count,1,C4,2,0,1,0)
+    PulseCount(grv_tip_L,1,C1,2,0,0.1,0)
+    PulseCount(ext_tip_L,1,C2,2,0,0.1,0)
+    PulseCount(wet_tip_L,1,C3,2,0,0.1,0)
+    PulseCount(int_tip_L,1,C4,2,0,0.1,0)
     
-    'Convert tips to outflow
-     outflow_tip_grv_flow = outflow_tip_grv_count *  outflow_tip_mult
-     outflow_tip_int_flow = outflow_tip_int_count *  outflow_tip_mult
-     outflow_tip_wet_flow = outflow_tip_wet_count *  outflow_tip_mult
-     outflow_tip_ext_flow = outflow_tip_ext_count *  outflow_tip_mult
+    'Read pressure sensor voltage
+    VoltDiff(grv_pres_mv,1,mV1000,1,True,0,50,1.0,0)
+    VoltDiff(ext_pres_mv,1,mV1000,2,True,0,50,1.0,0)
+    VoltDiff(wet_pres_mv,1,mV1000,3,True,0,50,1.0,0)
+    VoltDiff(int_pres_mv,1,mV1000,4,True,0,50,1.0,0)
+    
+    'Convert pressure sensor voltage to mm (Ueberstauhoehe, s)
+    grv_pres_mm = grv_pres_mv * 1.02 * 0.5 - X_GRV
+    ext_pres_mm = grv_pres_mv * 1.02 * 0.5 - X_EXT
+    wet_pres_mm = grv_pres_mv * 1.02 * 0.5 - X_WET
+    int_pres_mm = grv_pres_mv * 1.02 * 0.5 - X_INT
+    
+    'Convert pressure sensor mm to L (Flow over weir, Q)
+    grv_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(grv_pres_mm/1000)) * 0.637 * (grv_pres_mm/1000)^2.5
+    ext_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(ext_pres_mm/1000)) * 0.637 * (ext_pres_mm/1000)^2.5
+    wet_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(wet_pres_mm/1000)) * 0.637 * (wet_pres_mm/1000)^2.5
+    int_pres_L = 1000 * SCAN_INTERVAL * 2.363 * (0.565 + 0.0087/SQR(int_pres_mm/1000)) * 0.637 * (int_pres_mm/1000)^2.5
+    
+    'Calculate total discharge
+    grv_tot_L = grv_tip_L + grv_pres_L
+    ext_tot_L = ext_tip_L + ext_pres_L
+    wet_tot_L = wet_tip_L + wet_pres_L
+    int_tot_L = int_tip_L + int_pres_L
+    
 
 
 
